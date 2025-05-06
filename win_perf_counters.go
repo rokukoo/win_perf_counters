@@ -35,7 +35,11 @@ func NewWinPerfCounters(collectFunc CollectFunc) *WinPerfCounters {
 		LocalizeWildcardsExpansion: true,
 		MaxBufferSize:              defaultMaxBufferSize,
 		queryCreator:               NewPerformanceQueryCreator(),
-		collect:                  collectFunc,
+		Log:                        Logger{
+			Name:  "win_perf_counters",
+			Quiet: false,
+		},
+		collect:                  	collectFunc,
 	}
 }
 

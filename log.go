@@ -18,54 +18,54 @@ type Logger struct {
 func (Logger) AddAttribute(string, interface{}) {}
 
 func (l Logger) Errorf(format string, args ...interface{}) {
-	log.Printf("E! ["+l.Name+"] "+format, args...)
+	log.Printf("[ERROR] ["+l.Name+"] "+format, args...)
 }
 
 func (l Logger) Error(args ...interface{}) {
-	log.Print(append([]interface{}{"E! [" + l.Name + "] "}, args...)...)
+	log.Print(append([]interface{}{"[ERROR] [" + l.Name + "] "}, args...)...)
 }
 
 func (l Logger) Warnf(format string, args ...interface{}) {
-	log.Printf("W! ["+l.Name+"] "+format, args...)
+	log.Printf("[WARN] ["+l.Name+"] "+format, args...)
 }
 
 func (l Logger) Warn(args ...interface{}) {
-	log.Print(append([]interface{}{"W! [" + l.Name + "] "}, args...)...)
+	log.Print(append([]interface{}{"[WARN] [" + l.Name + "] "}, args...)...)
 }
 
 func (l Logger) Infof(format string, args ...interface{}) {
 	if !l.Quiet {
-		log.Printf("I! ["+l.Name+"] "+format, args...)
+		log.Printf("[INFO] ["+l.Name+"] "+format, args...)
 	}
 }
 
 func (l Logger) Info(args ...interface{}) {
 	if !l.Quiet {
-		log.Print(append([]interface{}{"I! [" + l.Name + "] "}, args...)...)
+		log.Print(append([]interface{}{"[INFO] [" + l.Name + "] "}, args...)...)
 	}
 }
 
 func (l Logger) Debugf(format string, args ...interface{}) {
 	if !l.Quiet {
-		log.Printf("D! ["+l.Name+"] "+format, args...)
+		log.Printf("[DEBUG] ["+l.Name+"] "+format, args...)
 	}
 }
 
 func (l Logger) Debug(args ...interface{}) {
 	if !l.Quiet {
-		log.Print(append([]interface{}{"D! [" + l.Name + "] "}, args...)...)
+		log.Print(append([]interface{}{"[DEBUG] [" + l.Name + "] "}, args...)...)
 	}
 }
 
 func (l Logger) Tracef(format string, args ...interface{}) {
 	if !l.Quiet {
-		log.Printf("T! ["+l.Name+"] "+format, args...)
+		log.Printf("[TRACE] ["+l.Name+"] "+format, args...)
 	}
 }
 
 // Trace logs a trace message, patterned after log.Print.
 func (l Logger) Trace(args ...interface{}) {
 	if !l.Quiet {
-		log.Print(append([]interface{}{"T! [" + l.Name + "] "}, args...)...)
+		log.Print(append([]interface{}{"[TRACE] [" + l.Name + "] "}, args...)...)
 	}
 }

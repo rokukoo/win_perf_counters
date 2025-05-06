@@ -126,7 +126,7 @@ func TestPerformanceQueryImplIntegration(t *testing.T) {
 	require.NoError(t, query.Close())
 }
 
-func TestNewPerformanceQueryCreator(t *testing.T) {
+func ExampleNewPerformanceQueryCreator() {
 	counterPath := "\\Processor Information(_Total)\\% Processor Time"
 	query := NewPerformanceQuery(uint32(defaultMaxBufferSize))
 	query.Open()
@@ -136,6 +136,8 @@ func TestNewPerformanceQueryCreator(t *testing.T) {
 		fmt.Println(err)
 		return
 	}
+	query.CollectData()
+	time.Sleep(time.Second)
 	if err := query.CollectData(); err != nil {
 		fmt.Println(err)
 		return
@@ -146,4 +148,7 @@ func TestNewPerformanceQueryCreator(t *testing.T) {
 		return
 	}
 	fmt.Printf("%s: %f", counterPath, fcounter)
+
+	// Output:
+	// \Processor Information(_Total)\% Processor Time: 0.000000
 }
