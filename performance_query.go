@@ -44,14 +44,6 @@ type doubleValue struct {
 	Value float64
 }
 
-func (v doubleValue) GetName() string {
-	return v.Name
-}
-
-func (v doubleValue) GetValue() interface{} {
-	return v.Value
-}
-
 // PerformanceQuery provides wrappers around Windows performance counters API for easy usage in GO
 //
 //nolint:interfacebloat // conditionally allow to contain more methods
