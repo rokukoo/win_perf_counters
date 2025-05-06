@@ -13,9 +13,10 @@ import (
 // Initial buffer size for return buffers
 const initialBufferSize = uint32(1024) // 1kB
 
-var errBufferLimitReached = errors.New("buffer limit reached")
-
-var errUninitializedQuery = errors.New("uninitialized query")
+var (
+	errBufferLimitReached = errors.New("buffer limit reached")
+	errUninitializedQuery = errors.New("uninitialized query")
+)
 
 // counterValue is abstraction for pdhFmtCountervalueItemDouble
 type counterValue struct {
@@ -23,27 +24,27 @@ type counterValue struct {
 	value        interface{}
 }
 
-// performanceQuery provides wrappers around Windows performance counters API for easy usage in GO
+// PerformanceQuery provides wrappers around Windows performance counters API for easy usage in GO
 //
 //nolint:interfacebloat // conditionally allow to contain more methods
-type performanceQuery interface {
-	open() error
-	close() error
-	addCounterToQuery(counterPath string) (pdhCounterHandle, error)
-	addEnglishCounterToQuery(counterPath string) (pdhCounterHandle, error)
-	getCounterPath(counterHandle pdhCounterHandle) (string, error)
-	expandWildCardPath(counterPath string) ([]string, error)
-	getFormattedCounterValueDouble(hCounter pdhCounterHandle) (float64, error)
-	getRawCounterValue(hCounter pdhCounterHandle) (int64, error)
-	getFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]counterValue, error)
-	getRawCounterArray(hCounter pdhCounterHandle) ([]counterValue, error)
-	collectData() error
-	collectDataWithTime() (time.Time, error)
-	isVistaOrNewer() bool
+type PerformanceQuery interface {
+	Open() error
+	Close() error
+	AddCounterToQuery(counterPath string) (pdhCounterHandle, error)
+	AddEnglishCounterToQuery(counterPath string) (pdhCounterHandle, error)
+	GetCounterPath(counterHandle pdhCounterHandle) (string, error)
+	ExpandWildCardPath(counterPath string) ([]string, error)
+	GetFormattedCounterValueDouble(hCounter pdhCounterHandle) (float64, error)
+	GetRawCounterValue(hCounter pdhCounterHandle) (int64, error)
+	GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]counterValue, error)
+	GetRawCounterArray(hCounter pdhCounterHandle) ([]counterValue, error)
+	CollectData() error
+	CollectDataWithTime() (time.Time, error)
+	IsVistaOrNewer() bool
 }
 
 type performanceQueryCreator interface {
-	newPerformanceQuery(string, uint32) performanceQuery
+	newPerformanceQuery(string, uint32) PerformanceQuery
 }
 
 // pdhError represents error returned from Performance Counters API
@@ -71,15 +72,23 @@ type performanceQueryImpl struct {
 
 type performanceQueryCreatorImpl struct{}
 
-func (performanceQueryCreatorImpl) newPerformanceQuery(_ string, maxBufferSize uint32) performanceQuery {
+func NewPerformanceQueryCreator() performanceQueryCreator {
+	return &performanceQueryCreatorImpl{}
+}
+
+func (performanceQueryCreatorImpl) newPerformanceQuery(_ string, maxBufferSize uint32) PerformanceQuery {
 	return &performanceQueryImpl{maxBufferSize: maxBufferSize}
 }
 
-// open creates a new counterPath that is used to manage the collection of performance data.
+func NewPerformanceQuery(maxBufferSize uint32) PerformanceQuery {
+	return NewPerformanceQueryCreator().newPerformanceQuery("", maxBufferSize)
+}
+
+// Open creates a new counterPath that is used to manage the collection of performance data.
 // It returns counterPath handle used for subsequent calls for adding counters and querying data
-func (m *performanceQueryImpl) open() error {
+func (m *performanceQueryImpl) Open() error {
 	if m.queryHandle != 0 {
-		err := m.close()
+		err := m.Close()
 		if err != nil {
 			return err
 		}
@@ -93,8 +102,8 @@ func (m *performanceQueryImpl) open() error {
 	return nil
 }
 
-// close closes the counterPath, releases associated counter handles and frees resources
-func (m *performanceQueryImpl) close() error {
+// Close closes the counterPath, releases associated counter handles and frees resources
+func (m *performanceQueryImpl) Close() error {
 	if m.queryHandle == 0 {
 		return errUninitializedQuery
 	}
@@ -106,7 +115,7 @@ func (m *performanceQueryImpl) close() error {
 	return nil
 }
 
-func (m *performanceQueryImpl) addCounterToQuery(counterPath string) (pdhCounterHandle, error) {
+func (m *performanceQueryImpl) AddCounterToQuery(counterPath string) (pdhCounterHandle, error) {
 	var counterHandle pdhCounterHandle
 	if m.queryHandle == 0 {
 		return 0, errUninitializedQuery
@@ -118,7 +127,7 @@ func (m *performanceQueryImpl) addCounterToQuery(counterPath string) (pdhCounter
 	return counterHandle, nil
 }
 
-func (m *performanceQueryImpl) addEnglishCounterToQuery(counterPath string) (pdhCounterHandle, error) {
+func (m *performanceQueryImpl) AddEnglishCounterToQuery(counterPath string) (pdhCounterHandle, error) {
 	var counterHandle pdhCounterHandle
 	if m.queryHandle == 0 {
 		return 0, errUninitializedQuery
@@ -129,8 +138,8 @@ func (m *performanceQueryImpl) addEnglishCounterToQuery(counterPath string) (pdh
 	return counterHandle, nil
 }
 
-// getCounterPath returns counter information for given handle
-func (m *performanceQueryImpl) getCounterPath(counterHandle pdhCounterHandle) (string, error) {
+// GetCounterPath returns counter information for given handle
+func (m *performanceQueryImpl) GetCounterPath(counterHandle pdhCounterHandle) (string, error) {
 	for buflen := initialBufferSize; buflen <= m.maxBufferSize; buflen *= 2 {
 		buf := make([]byte, buflen)
 
@@ -156,8 +165,8 @@ func (m *performanceQueryImpl) getCounterPath(counterHandle pdhCounterHandle) (s
 	return "", errBufferLimitReached
 }
 
-// expandWildCardPath examines local computer and returns those counter paths that match the given counter path which contains wildcard characters.
-func (m *performanceQueryImpl) expandWildCardPath(counterPath string) ([]string, error) {
+// ExpandWildCardPath examines local computer and returns those counter paths that match the given counter path which contains wildcard characters.
+func (m *performanceQueryImpl) ExpandWildCardPath(counterPath string) ([]string, error) {
 	for buflen := initialBufferSize; buflen <= m.maxBufferSize; buflen *= 2 {
 		buf := make([]uint16, buflen)
 
@@ -182,8 +191,8 @@ func (m *performanceQueryImpl) expandWildCardPath(counterPath string) ([]string,
 	return nil, errBufferLimitReached
 }
 
-// getFormattedCounterValueDouble computes a displayable value for the specified counter
-func (*performanceQueryImpl) getFormattedCounterValueDouble(hCounter pdhCounterHandle) (float64, error) {
+// GetFormattedCounterValueDouble computes a displayable value for the specified counter
+func (*performanceQueryImpl) GetFormattedCounterValueDouble(hCounter pdhCounterHandle) (float64, error) {
 	var counterType uint32
 	var value pdhFmtCountervalueDouble
 
@@ -196,7 +205,7 @@ func (*performanceQueryImpl) getFormattedCounterValueDouble(hCounter pdhCounterH
 	return 0, newPdhError(value.CStatus)
 }
 
-func (m *performanceQueryImpl) getFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]counterValue, error) {
+func (m *performanceQueryImpl) GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]counterValue, error) {
 	for buflen := initialBufferSize; buflen <= m.maxBufferSize; buflen *= 2 {
 		buf := make([]byte, buflen)
 
@@ -231,7 +240,7 @@ func (m *performanceQueryImpl) getFormattedCounterArrayDouble(hCounter pdhCounte
 	return nil, errBufferLimitReached
 }
 
-func (m *performanceQueryImpl) getRawCounterArray(hCounter pdhCounterHandle) ([]counterValue, error) {
+func (m *performanceQueryImpl) GetRawCounterArray(hCounter pdhCounterHandle) ([]counterValue, error) {
 	for buflen := initialBufferSize; buflen <= m.maxBufferSize; buflen *= 2 {
 		buf := make([]byte, buflen)
 
@@ -266,7 +275,7 @@ func (m *performanceQueryImpl) getRawCounterArray(hCounter pdhCounterHandle) ([]
 	return nil, errBufferLimitReached
 }
 
-func (m *performanceQueryImpl) collectData() error {
+func (m *performanceQueryImpl) CollectData() error {
 	var ret uint32
 	if m.queryHandle == 0 {
 		return errUninitializedQuery
@@ -278,7 +287,7 @@ func (m *performanceQueryImpl) collectData() error {
 	return nil
 }
 
-func (m *performanceQueryImpl) collectDataWithTime() (time.Time, error) {
+func (m *performanceQueryImpl) CollectDataWithTime() (time.Time, error) {
 	if m.queryHandle == 0 {
 		return time.Now(), errUninitializedQuery
 	}
@@ -289,11 +298,11 @@ func (m *performanceQueryImpl) collectDataWithTime() (time.Time, error) {
 	return mtime, nil
 }
 
-func (*performanceQueryImpl) isVistaOrNewer() bool {
+func (*performanceQueryImpl) IsVistaOrNewer() bool {
 	return pdhAddEnglishCounterSupported()
 }
 
-func (m *performanceQueryImpl) getRawCounterValue(hCounter pdhCounterHandle) (int64, error) {
+func (m *performanceQueryImpl) GetRawCounterValue(hCounter pdhCounterHandle) (int64, error) {
 	if m.queryHandle == 0 {
 		return 0, errUninitializedQuery
 	}

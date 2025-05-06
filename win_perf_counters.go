@@ -34,7 +34,7 @@ func NewWinPerfCounters(collectFunc CollectFunc) *WinPerfCounters {
 		CountersRefreshInterval:    Duration(time.Second * 60),
 		LocalizeWildcardsExpansion: true,
 		MaxBufferSize:              defaultMaxBufferSize,
-		queryCreator:               &performanceQueryCreatorImpl{},
+		queryCreator:               NewPerformanceQueryCreator(),
 		collect:                  collectFunc,
 	}
 }
@@ -107,7 +107,7 @@ type hostCountersInfo struct {
 	// counters 该主机上的性能计数器列表。
 	counters []*counter
 	// query 性能计数器查询接口。
-	query performanceQuery
+	query PerformanceQuery
 	// timestamp 最近一次查询的时间戳。
 	timestamp time.Time
 }
@@ -206,7 +206,7 @@ func (m *WinPerfCounters) Gather() error {
 		}
 		for _, hostCounterSet := range m.hostCounters {
 			// some counters need two data samples before computing a value
-			if err = hostCounterSet.query.collectData(); err != nil {
+			if err = hostCounterSet.query.CollectData(); err != nil {
 				return m.checkError(err)
 			}
 		}
@@ -217,16 +217,16 @@ func (m *WinPerfCounters) Gather() error {
 
 	// 收集每个主机的计数器数据
 	for _, hostCounterSet := range m.hostCounters {
-		if m.UsePerfCounterTime && hostCounterSet.query.isVistaOrNewer() {
+		if m.UsePerfCounterTime && hostCounterSet.query.IsVistaOrNewer() {
 			// 使用性能计数器时间戳
-			hostCounterSet.timestamp, err = hostCounterSet.query.collectDataWithTime()
+			hostCounterSet.timestamp, err = hostCounterSet.query.CollectDataWithTime()
 			if err != nil {
 				return err
 			}
 		} else {
 			// 使用当前时间作为时间戳
 			hostCounterSet.timestamp = time.Now()
-			if err := hostCounterSet.query.collectData(); err != nil {
+			if err := hostCounterSet.query.CollectData(); err != nil {
 				return err
 			}
 		}
@@ -283,19 +283,19 @@ func (m *WinPerfCounters) addItem(counterPath, computer, objectName, instance, c
 		hostCounter = &hostCountersInfo{computer: computer, tag: sourceTag}
 		m.hostCounters[computer] = hostCounter
 		hostCounter.query = m.queryCreator.newPerformanceQuery(computer, uint32(m.MaxBufferSize))
-		if err := hostCounter.query.open(); err != nil {
+		if err := hostCounter.query.Open(); err != nil {
 			return err
 		}
 		hostCounter.counters = make([]*counter, 0)
 	}
 
-	if !hostCounter.query.isVistaOrNewer() {
-		counterHandle, err = hostCounter.query.addCounterToQuery(counterPath)
+	if !hostCounter.query.IsVistaOrNewer() {
+		counterHandle, err = hostCounter.query.AddCounterToQuery(counterPath)
 		if err != nil {
 			return err
 		}
 	} else {
-		counterHandle, err = hostCounter.query.addEnglishCounterToQuery(counterPath)
+		counterHandle, err = hostCounter.query.AddEnglishCounterToQuery(counterPath)
 		if err != nil {
 			return err
 		}
@@ -303,11 +303,11 @@ func (m *WinPerfCounters) addItem(counterPath, computer, objectName, instance, c
 
 	if m.UseWildcardsExpansion {
 		origInstance := instance
-		counterPath, err = hostCounter.query.getCounterPath(counterHandle)
+		counterPath, err = hostCounter.query.GetCounterPath(counterHandle)
 		if err != nil {
 			return err
 		}
-		counters, err := hostCounter.query.expandWildCardPath(counterPath)
+		counters, err := hostCounter.query.ExpandWildCardPath(counterPath)
 		if err != nil {
 			return err
 		}
@@ -318,7 +318,7 @@ func (m *WinPerfCounters) addItem(counterPath, computer, objectName, instance, c
 		}
 
 		for _, counterPath := range counters {
-			_, err := hostCounter.query.addCounterToQuery(counterPath)
+			_, err := hostCounter.query.AddCounterToQuery(counterPath)
 			if err != nil {
 				return err
 			}
@@ -343,7 +343,7 @@ func (m *WinPerfCounters) addItem(counterPath, computer, objectName, instance, c
 					newInstance = instance
 				}
 				counterPath = formatPath(computer, origObjectName, newInstance, origCounterName)
-				counterHandle, err = hostCounter.query.addEnglishCounterToQuery(counterPath)
+				counterHandle, err = hostCounter.query.AddEnglishCounterToQuery(counterPath)
 				if err != nil {
 					return err
 				}
@@ -358,7 +358,7 @@ func (m *WinPerfCounters) addItem(counterPath, computer, objectName, instance, c
 					useRawValue,
 				)
 			} else {
-				counterHandle, err = hostCounter.query.addCounterToQuery(counterPath)
+				counterHandle, err = hostCounter.query.AddCounterToQuery(counterPath)
 				if err != nil {
 					return err
 				}
@@ -463,9 +463,9 @@ func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersIn
 		// collect
 		if m.UseWildcardsExpansion {
 			if metric.useRawValue {
-				value, err = hostCounterInfo.query.getRawCounterValue(metric.counterHandle)
+				value, err = hostCounterInfo.query.GetRawCounterValue(metric.counterHandle)
 			} else {
-				value, err = hostCounterInfo.query.getFormattedCounterValueDouble(metric.counterHandle)
+				value, err = hostCounterInfo.query.GetFormattedCounterValueDouble(metric.counterHandle)
 			}
 			if err != nil {
 				// ignore invalid data  as some counters from process instances returns this sometimes
@@ -479,9 +479,9 @@ func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersIn
 		} else {
 			var counterValues []counterValue
 			if metric.useRawValue {
-				counterValues, err = hostCounterInfo.query.getRawCounterArray(metric.counterHandle)
+				counterValues, err = hostCounterInfo.query.GetRawCounterArray(metric.counterHandle)
 			} else {
-				counterValues, err = hostCounterInfo.query.getFormattedCounterArrayDouble(metric.counterHandle)
+				counterValues, err = hostCounterInfo.query.GetFormattedCounterArrayDouble(metric.counterHandle)
 			}
 			if err != nil {
 				// ignore invalid data  as some counters from process instances returns this sometimes
@@ -530,7 +530,7 @@ func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersIn
 //   error：如果关闭查询时发生错误则返回相应错误，否则返回 nil。
 func (m *WinPerfCounters) cleanQueries() error {
 	for _, hostCounterInfo := range m.hostCounters {
-		if err := hostCounterInfo.query.close(); err != nil {
+		if err := hostCounterInfo.query.Close(); err != nil {
 			return err
 		}
 	}
