@@ -240,6 +240,7 @@ var (
 	pdhGetCounterInfoWProc           *syscall.Proc
 	pdhGetRawCounterValueProc        *syscall.Proc
 	pdhGetRawCounterArrayWProc       *syscall.Proc
+	pdhValidatePathWProc             *syscall.Proc
 )
 
 func init() {
@@ -259,6 +260,7 @@ func init() {
 	pdhGetCounterInfoWProc = libPdhDll.MustFindProc("PdhGetCounterInfoW")
 	pdhGetRawCounterValueProc = libPdhDll.MustFindProc("PdhGetRawCounterValue")
 	pdhGetRawCounterArrayWProc = libPdhDll.MustFindProc("PdhGetRawCounterArrayW")
+	pdhValidatePathWProc = libPdhDll.MustFindProc("PdhValidatePathW")
 }
 
 // pdhAddCounter adds the specified counter to the query. This is the internationalized version. Preferably, use the
@@ -602,5 +604,14 @@ func pdhGetRawCounterArray(hCounter pdhCounterHandle, lpdwBufferSize, lpdwBuffer
 		uintptr(unsafe.Pointer(lpdwBufferSize)),  //nolint:gosec // G103: Valid use of unsafe call to pass lpdwBufferSize
 		uintptr(unsafe.Pointer(lpdwBufferCount)), //nolint:gosec // G103: Valid use of unsafe call to pass lpdwBufferCount
 		uintptr(unsafe.Pointer(itemBuffer)))      //nolint:gosec // G103: Valid use of unsafe call to pass itemBuffer
+	return uint32(ret)
+}
+
+// Validates a path. Will return ERROR_SUCCESS when ok, or PDH_CSTATUS_BAD_COUNTERNAME when the path is
+// erroneous.
+func pdhValidatePath(path string) uint32 {
+	ptxt, _ := syscall.UTF16PtrFromString(path)
+	ret, _, _ := pdhValidatePathWProc.Call(uintptr(unsafe.Pointer(ptxt)))
+
 	return uint32(ret)
 }
