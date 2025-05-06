@@ -67,7 +67,7 @@ func newPdhError(code uint32) error {
 // performanceQueryImpl is implementation of performanceQuery interface, which calls phd.dll functions
 type performanceQueryImpl struct {
 	maxBufferSize uint32
-	queryHandle         pdhQueryHandle
+	queryHandle   pdhQueryHandle
 }
 
 type performanceQueryCreatorImpl struct{}
@@ -125,6 +125,14 @@ func (m *performanceQueryImpl) AddCounterToQuery(counterPath string) (pdhCounter
 		return 0, newPdhError(ret)
 	}
 	return counterHandle, nil
+}
+
+func (m *performanceQueryImpl) MustAddCounterToQuery(counterPath string) pdhCounterHandle {
+	counterHandle, err := m.AddCounterToQuery(counterPath)
+	if err != nil {
+		panic(err)
+	}
+	return counterHandle
 }
 
 func (m *performanceQueryImpl) AddEnglishCounterToQuery(counterPath string) (pdhCounterHandle, error) {
