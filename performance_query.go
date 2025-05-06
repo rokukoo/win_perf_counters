@@ -24,11 +24,6 @@ type counterValue struct {
 	Value interface{}
 }
 
-type counterValueInterface interface {
-	GetName() string
-	GetValue() interface{}
-}
-
 type longValue struct {
 	Name  string
 	Value int32
