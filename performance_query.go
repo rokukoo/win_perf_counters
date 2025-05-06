@@ -20,8 +20,36 @@ var (
 
 // counterValue is abstraction for pdhFmtCountervalueItemDouble
 type counterValue struct {
-	instanceName string
-	value        interface{}
+	Name  string
+	Value interface{}
+}
+
+type counterValueInterface interface {
+	GetName() string
+	GetValue() interface{}
+}
+
+type longValue struct {
+	Name  string
+	Value int32
+}
+
+type largeValue struct {
+	Name  string
+	Value int64
+}
+
+type doubleValue struct {
+	Name  string
+	Value float64
+}
+
+func (v doubleValue) GetName() string {
+	return v.Name
+}
+
+func (v doubleValue) GetValue() interface{} {
+	return v.Value
 }
 
 // PerformanceQuery provides wrappers around Windows performance counters API for easy usage in GO
@@ -35,10 +63,17 @@ type PerformanceQuery interface {
 	AddEnglishCounterToQuery(counterPath string) (pdhCounterHandle, error)
 	GetCounterPath(counterHandle pdhCounterHandle) (string, error)
 	ExpandWildCardPath(counterPath string) ([]string, error)
-	GetFormattedCounterValueDouble(hCounter pdhCounterHandle) (float64, error)
+
 	GetRawCounterValue(hCounter pdhCounterHandle) (int64, error)
-	GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]counterValue, error)
+	GetFormattedCounterValueLong(hCounter pdhCounterHandle) (int32, error)
+	GetFormattedCounterValueLarge(hCounter pdhCounterHandle) (int64, error)
+	GetFormattedCounterValueDouble(hCounter pdhCounterHandle) (float64, error)
+
 	GetRawCounterArray(hCounter pdhCounterHandle) ([]counterValue, error)
+	GetFormattedCounterArrayLong(hCounter pdhCounterHandle) ([]longValue, error)
+	GetFormattedCounterArrayLarge(hCounter pdhCounterHandle) ([]largeValue, error)
+	GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]doubleValue, error)
+
 	CollectData() error
 	CollectDataWithTime() (time.Time, error)
 	IsVistaOrNewer() bool
@@ -85,7 +120,7 @@ func NewPerformanceQuery(maxBufferSize uint32) PerformanceQuery {
 	return NewPerformanceQueryCreator().newPerformanceQuery("", maxBufferSize)
 }
 
-func MustNewOpenedPerformanceQuery(maxBufferSize uint32) PerformanceQuery {
+func MustNewOpenPerformanceQuery(maxBufferSize uint32) PerformanceQuery {
 	query := NewPerformanceQuery(maxBufferSize)
 	if err := query.Open(); err != nil {
 		panic(err)
@@ -208,10 +243,36 @@ func (m *performanceQueryImpl) ExpandWildCardPath(counterPath string) ([]string,
 	return nil, errBufferLimitReached
 }
 
+func (m *performanceQueryImpl) GetFormattedCounterValueLong(hCounter pdhCounterHandle) (int32, error) {
+	var counterType uint32
+	var value pdhFmtCounterValueLong
+
+	if ret := pdhGetFormattedCounterValueLong(hCounter, &counterType, &value); ret != errorSuccess {
+		return 0, newPdhError(ret)
+	}
+	if value.CStatus == pdhCstatusValidData || value.CStatus == pdhCstatusNewData {
+		return value.LongValue, nil
+	}
+	return 0, newPdhError(value.CStatus)
+}
+
+func (m *performanceQueryImpl) GetFormattedCounterValueLarge(hCounter pdhCounterHandle) (int64, error) {
+	var counterType uint32
+	var value pdhFmtCounterValueLarge
+
+	if ret := pdhGetFormattedCounterValueLarge(hCounter, &counterType, &value); ret != errorSuccess {
+		return 0, newPdhError(ret)
+	}
+	if value.CStatus == pdhCstatusValidData || value.CStatus == pdhCstatusNewData {
+		return value.LargeValue, nil
+	}
+	return 0, newPdhError(value.CStatus)
+}
+
 // GetFormattedCounterValueDouble computes a displayable value for the specified counter
 func (*performanceQueryImpl) GetFormattedCounterValueDouble(hCounter pdhCounterHandle) (float64, error) {
 	var counterType uint32
-	var value pdhFmtCountervalueDouble
+	var value pdhFmtCounterValueDouble
 
 	if ret := pdhGetFormattedCounterValueDouble(hCounter, &counterType, &value); ret != errorSuccess {
 		return 0, newPdhError(ret)
@@ -222,7 +283,77 @@ func (*performanceQueryImpl) GetFormattedCounterValueDouble(hCounter pdhCounterH
 	return 0, newPdhError(value.CStatus)
 }
 
-func (m *performanceQueryImpl) GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]counterValue, error) {
+func (m *performanceQueryImpl) GetFormattedCounterArrayLong(hCounter pdhCounterHandle) ([]longValue, error) {
+	for buflen := initialBufferSize; buflen <= m.maxBufferSize; buflen *= 2 {
+		buf := make([]byte, buflen)
+
+		// Get the info with the current buffer size
+		var itemCount uint32
+		size := buflen
+		ret := pdhGetFormattedCounterArrayLong(hCounter, &size, &itemCount, &buf[0])
+		if ret == errorSuccess {
+			//nolint:gosec // G103: Valid use of unsafe call to create PDH_FMT_COUNTERVALUE_ITEM_LONG
+			items := (*[1 << 20]pdhFmtCounterValueItemLong)(unsafe.Pointer(&buf[0]))[:itemCount]
+			values := make([]longValue, 0, itemCount)
+			for _, item := range items {
+				if item.FmtValue.CStatus == pdhCstatusValidData || item.FmtValue.CStatus == pdhCstatusNewData {
+					val := longValue{utf16PtrToString(item.SzName), item.FmtValue.LongValue}
+					values = append(values, val)
+				}
+			}
+			return values, nil
+		}
+
+		// Use the size as a hint if it exceeds the current buffer size
+		if size > buflen {
+			buflen = size
+		}
+
+		// We got a non-recoverable error so exit here
+		if ret != pdhMoreData {
+			return nil, newPdhError(ret)
+		}
+	}
+
+	return nil, errBufferLimitReached
+}
+
+func (m *performanceQueryImpl) GetFormattedCounterArrayLarge(hCounter pdhCounterHandle) ([]largeValue, error) {
+	for buflen := initialBufferSize; buflen <= m.maxBufferSize; buflen *= 2 {
+		buf := make([]byte, buflen)
+
+		// Get the info with the current buffer size
+		var itemCount uint32
+		size := buflen
+		ret := pdhGetFormattedCounterArrayLarge(hCounter, &size, &itemCount, &buf[0])
+		if ret == errorSuccess {
+			//nolint:gosec // G103: Valid use of unsafe call to create PDH_FMT_COUNTERVALUE_ITEM_LARGE
+			items := (*[1 << 20]pdhFmtCounterValueItemLarge)(unsafe.Pointer(&buf[0]))[:itemCount]
+			values := make([]largeValue, 0, itemCount)
+			for _, item := range items {
+				if item.FmtValue.CStatus == pdhCstatusValidData || item.FmtValue.CStatus == pdhCstatusNewData {
+					val := largeValue{utf16PtrToString(item.SzName), item.FmtValue.LargeValue}
+					values = append(values, val)
+				}
+			}
+			return values, nil
+		}
+
+		// Use the size as a hint if it exceeds the current buffer size
+		if size > buflen {
+			buflen = size
+		}
+
+		// We got a non-recoverable error so exit here
+		if ret != pdhMoreData {
+			return nil, newPdhError(ret)
+		}
+	}
+
+	return nil, errBufferLimitReached
+}
+
+func (m *performanceQueryImpl) GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]doubleValue, error) {
 	for buflen := initialBufferSize; buflen <= m.maxBufferSize; buflen *= 2 {
 		buf := make([]byte, buflen)
 
@@ -232,11 +363,11 @@ func (m *performanceQueryImpl) GetFormattedCounterArrayDouble(hCounter pdhCounte
 		ret := pdhGetFormattedCounterArrayDouble(hCounter, &size, &itemCount, &buf[0])
 		if ret == errorSuccess {
 			//nolint:gosec // G103: Valid use of unsafe call to create PDH_FMT_COUNTERVALUE_ITEM_DOUBLE
-			items := (*[1 << 20]pdhFmtCountervalueItemDouble)(unsafe.Pointer(&buf[0]))[:itemCount]
-			values := make([]counterValue, 0, itemCount)
+			items := (*[1 << 20]pdhFmtCounterValueItemDouble)(unsafe.Pointer(&buf[0]))[:itemCount]
+			values := make([]doubleValue, 0, itemCount)
 			for _, item := range items {
 				if item.FmtValue.CStatus == pdhCstatusValidData || item.FmtValue.CStatus == pdhCstatusNewData {
-					val := counterValue{utf16PtrToString(item.SzName), item.FmtValue.DoubleValue}
+					val := doubleValue{utf16PtrToString(item.SzName), item.FmtValue.DoubleValue}
 					values = append(values, val)
 				}
 			}

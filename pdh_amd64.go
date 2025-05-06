@@ -2,16 +2,36 @@
 
 package win_perf_counters
 
-// pdhFmtCountervalueDouble is a union specialization for double values
-type pdhFmtCountervalueDouble struct {
+type pdhFmtCounterValueLong struct {
+	CStatus   uint32
+	LongValue int32
+}
+
+type pdhFmtCounterValueItemLong struct {
+	SzName   *uint16
+	FmtValue pdhFmtCounterValueLong
+}
+
+type pdhFmtCounterValueLarge struct {
+	CStatus    uint32
+	LargeValue int64
+}
+
+type pdhFmtCounterValueItemLarge struct {
+	SzName   *uint16
+	FmtValue pdhFmtCounterValueLarge
+}
+
+// pdhFmtCounterValueDouble is a union specialization for double values
+type pdhFmtCounterValueDouble struct {
 	CStatus     uint32
 	DoubleValue float64
 }
 
-// pdhFmtCountervalueItemDouble is a union specialization for double values, used by pdhGetFormattedCounterArrayDouble
-type pdhFmtCountervalueItemDouble struct {
+// pdhFmtCounterValueItemDouble is a union specialization for double values, used by pdhGetFormattedCounterArrayDouble
+type pdhFmtCounterValueItemDouble struct {
 	SzName   *uint16
-	FmtValue pdhFmtCountervalueDouble
+	FmtValue pdhFmtCounterValueDouble
 }
 
 // pdhCounterInfo structure contains information describing the properties of a counter. This information also includes the counter path.

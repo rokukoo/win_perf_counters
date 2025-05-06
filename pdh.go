@@ -401,14 +401,66 @@ func pdhCollectQueryDataWithTime(hQuery pdhQueryHandle) (uint32, time.Time) {
 	return uint32(ret), time.Now()
 }
 
+// pdhGetFormattedCounterValueLong Formats the given hCounter using a 'long'. The result is set into the specialized union struct pValue.
+// This function does not directly translate to a Windows counterpart due to union specialization tricks.
+func pdhGetFormattedCounterValueLong(hCounter pdhCounterHandle, lpdwType *uint32, pValue *pdhFmtCounterValueLong) uint32 {
+	ret, _, _ := pdhGetFormattedCounterValueProc.Call(
+		uintptr(hCounter),
+		uintptr(pdhFmtLong),
+		uintptr(unsafe.Pointer(lpdwType)),
+		uintptr(unsafe.Pointer(pValue)))
+
+	return uint32(ret)
+}
+
+// FpdhGetFormattedCounterValueLarge ormats the given hCounter using a large int (int64). The result is set into the specialized union struct pValue.
+// This function does not directly translate to a Windows counterpart due to union specialization tricks.
+func pdhGetFormattedCounterValueLarge(hCounter pdhCounterHandle, lpdwType *uint32, pValue *pdhFmtCounterValueLarge) uint32 {
+	ret, _, _ := pdhGetFormattedCounterValueProc.Call(
+		uintptr(hCounter),
+		uintptr(pdhFmtLarge),
+		uintptr(unsafe.Pointer(lpdwType)),
+		uintptr(unsafe.Pointer(pValue)))
+
+	return uint32(ret)
+}
+
 // pdhGetFormattedCounterValueDouble formats the given hCounter using a 'double'. The result is set into the specialized union struct pValue.
 // This function does not directly translate to a Windows counterpart due to union specialization tricks.
-func pdhGetFormattedCounterValueDouble(hCounter pdhCounterHandle, lpdwType *uint32, pValue *pdhFmtCountervalueDouble) uint32 {
+func pdhGetFormattedCounterValueDouble(hCounter pdhCounterHandle, lpdwType *uint32, pValue *pdhFmtCounterValueDouble) uint32 {
 	ret, _, _ := pdhGetFormattedCounterValueProc.Call(
 		uintptr(hCounter),
 		uintptr(pdhFmtDouble|pdhFmtNocap100),
 		uintptr(unsafe.Pointer(lpdwType)), //nolint:gosec // G103: Valid use of unsafe call to pass lpdwType
 		uintptr(unsafe.Pointer(pValue)))   //nolint:gosec // G103: Valid use of unsafe call to pass pValue
+
+	return uint32(ret)
+}
+
+// pdhGetFormattedCounterArrayLong Returns an array of formatted counter values. Use this function when you want to format the counter values of a
+// counter that contains a wildcard character for the instance name. The itemBuffer must a slice of type PDH_FMT_COUNTERVALUE_ITEM_LONG.
+// For an example usage, see PdhGetFormattedCounterArrayDouble.
+func pdhGetFormattedCounterArrayLong(hCounter pdhCounterHandle, lpdwBufferSize *uint32, lpdwBufferCount *uint32, itemBuffer *byte) uint32 {
+	ret, _, _ := pdhGetFormattedCounterArrayWProc.Call(
+		uintptr(hCounter),
+		uintptr(pdhFmtLong),
+		uintptr(unsafe.Pointer(lpdwBufferSize)),
+		uintptr(unsafe.Pointer(lpdwBufferCount)),
+		uintptr(unsafe.Pointer(itemBuffer)))
+
+	return uint32(ret)
+}
+
+// pdhGetFormattedCounterArrayLarge Returns an array of formatted counter values. Use this function when you want to format the counter values of a
+// counter that contains a wildcard character for the instance name. The itemBuffer must a slice of type PDH_FMT_COUNTERVALUE_ITEM_LARGE.
+// For an example usage, see PdhGetFormattedCounterArrayDouble.
+func pdhGetFormattedCounterArrayLarge(hCounter pdhCounterHandle, lpdwBufferSize *uint32, lpdwBufferCount *uint32, itemBuffer *byte) uint32 {
+	ret, _, _ := pdhGetFormattedCounterArrayWProc.Call(
+		uintptr(hCounter),
+		uintptr(pdhFmtLarge),
+		uintptr(unsafe.Pointer(lpdwBufferSize)),
+		uintptr(unsafe.Pointer(lpdwBufferCount)),
+		uintptr(unsafe.Pointer(itemBuffer)))
 
 	return uint32(ret)
 }

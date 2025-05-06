@@ -35,44 +35,44 @@ func NewWinPerfCounters(collectFunc CollectFunc) *WinPerfCounters {
 		LocalizeWildcardsExpansion: true,
 		MaxBufferSize:              defaultMaxBufferSize,
 		queryCreator:               NewPerformanceQueryCreator(),
-		Log:                        Logger{
+		Log: Logger{
 			Name:  "win_perf_counters",
 			Quiet: false,
 		},
-		collect:                  	collectFunc,
+		collect: collectFunc,
 	}
 }
 
 // WinPerfCounters 用于管理和采集 Windows 性能计数器数据的主要结构体。
 type WinPerfCounters struct {
 	// PrintValid 是否打印有效的计数器路径。
-	PrintValid                 bool            `toml:"PrintValid"`
+	PrintValid bool `toml:"PrintValid"`
 	// PreVistaSupport 是否支持 Vista 之前的系统（已废弃，动态判断）。
-	PreVistaSupport            bool            `toml:"PreVistaSupport" deprecated:"1.7.0;1.35.0;determined dynamically"`
+	PreVistaSupport bool `toml:"PreVistaSupport" deprecated:"1.7.0;1.35.0;determined dynamically"`
 	// UsePerfCounterTime 是否使用性能计数器的时间戳。
-	UsePerfCounterTime         bool            `toml:"UsePerfCounterTime"`
+	UsePerfCounterTime bool `toml:"UsePerfCounterTime"`
 	// Object 配置的性能对象列表。
-	Object                     []perfObject    `toml:"object"`
+	Object []perfObject `toml:"object"`
 	// CountersRefreshInterval 性能计数器刷新间隔。
-	CountersRefreshInterval    Duration `toml:"CountersRefreshInterval"`
+	CountersRefreshInterval Duration `toml:"CountersRefreshInterval"`
 	// UseWildcardsExpansion 是否启用通配符展开。
-	UseWildcardsExpansion      bool            `toml:"UseWildcardsExpansion"`
+	UseWildcardsExpansion bool `toml:"UseWildcardsExpansion"`
 	// LocalizeWildcardsExpansion 是否本地化通配符展开。
-	LocalizeWildcardsExpansion bool            `toml:"LocalizeWildcardsExpansion"`
+	LocalizeWildcardsExpansion bool `toml:"LocalizeWildcardsExpansion"`
 	// IgnoredErrors 需要忽略的错误列表。
-	IgnoredErrors              []string        `toml:"IgnoredErrors"`
+	IgnoredErrors []string `toml:"IgnoredErrors"`
 	// MaxBufferSize 最大缓冲区大小。
-	MaxBufferSize              Size     `toml:"MaxBufferSize"`
+	MaxBufferSize Size `toml:"MaxBufferSize"`
 	// Sources 数据源主机列表。
-	Sources                    []string        `toml:"Sources"`
+	Sources []string `toml:"Sources"`
 	// Log 日志记录器。
 	Log Logger `toml:"-"`
-	// lastRefreshed 上次刷新时间。	
+	// lastRefreshed 上次刷新时间。
 	lastRefreshed time.Time
 	// queryCreator 性能查询创建器。
-	queryCreator  performanceQueryCreator
+	queryCreator performanceQueryCreator
 	// hostCounters 主机计数器信息映射。
-	hostCounters  map[string]*hostCountersInfo
+	hostCounters map[string]*hostCountersInfo
 	// cachedHostname 缓存的主机名。
 	cachedHostname string
 
@@ -83,23 +83,23 @@ type WinPerfCounters struct {
 // perfObject 表示一个性能对象的配置项，用于指定需要采集的性能计数器及其实例。
 type perfObject struct {
 	// Sources 指定采集该对象的主机列表。
-	Sources       []string `toml:"Sources"`
+	Sources []string `toml:"Sources"`
 	// ObjectName 性能对象名称。
-	ObjectName    string   `toml:"ObjectName"`
+	ObjectName string `toml:"ObjectName"`
 	// Counters 需要采集的计数器名称列表。
-	Counters      []string `toml:"Counters"`
+	Counters []string `toml:"Counters"`
 	// Instances 需要采集的实例名称列表。
-	Instances     []string `toml:"Instances"`
+	Instances []string `toml:"Instances"`
 	// Measurement 采集数据对应的测量名称。
-	Measurement   string   `toml:"Measurement"`
+	Measurement string `toml:"Measurement"`
 	// WarnOnMissing 缺失计数器时是否警告。
-	WarnOnMissing bool     `toml:"WarnOnMissing"`
+	WarnOnMissing bool `toml:"WarnOnMissing"`
 	// FailOnMissing 缺失计数器时是否报错并终止。
-	FailOnMissing bool     `toml:"FailOnMissing"`
+	FailOnMissing bool `toml:"FailOnMissing"`
 	// IncludeTotal 是否包含 _Total 实例。
-	IncludeTotal  bool     `toml:"IncludeTotal"`
+	IncludeTotal bool `toml:"IncludeTotal"`
 	// UseRawValues 是否采集原始值。
-	UseRawValues  bool     `toml:"UseRawValues"`
+	UseRawValues bool `toml:"UseRawValues"`
 }
 
 // hostCountersInfo 存储主机性能计数器的相关信息。
@@ -119,21 +119,21 @@ type hostCountersInfo struct {
 // counter 表示一个性能计数器的配置和状态信息。
 type counter struct {
 	// counterPath 计数器的完整路径。
-	counterPath   string
+	counterPath string
 	// computer 计数器所属的计算机名称。
-	computer      string
+	computer string
 	// objectName 计数器所属的性能对象名称。
-	objectName    string
+	objectName string
 	// counter 计数器名称。
-	counter       string
+	counter string
 	// instance 计数器实例名称。
-	instance      string
+	instance string
 	// measurement 计数器对应的测量名称。
-	measurement   string
+	measurement string
 	// includeTotal 是否包含 _Total 实例。
-	includeTotal  bool
+	includeTotal bool
 	// useRawValue 是否使用原始值。
-	useRawValue   bool
+	useRawValue bool
 	// counterHandle 计数器句柄。
 	counterHandle pdhCounterHandle
 }
@@ -141,9 +141,9 @@ type counter struct {
 // instanceGrouping 用于将计数器数据分组为实例组。
 type instanceGrouping struct {
 	// name 实例组的名称。
-	name       string
+	name string
 	// instance 实例名称。
-	instance   string
+	instance string
 	// objectName 性能对象名称。
 	objectName string
 }
@@ -485,7 +485,14 @@ func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersIn
 			if metric.useRawValue {
 				counterValues, err = hostCounterInfo.query.GetRawCounterArray(metric.counterHandle)
 			} else {
-				counterValues, err = hostCounterInfo.query.GetFormattedCounterArrayDouble(metric.counterHandle)
+				// counterValues, err = hostCounterInfo.query.GetFormattedCounterArrayDouble(metric.counterHandle)
+				doubleValues, err := hostCounterInfo.query.GetFormattedCounterArrayDouble(metric.counterHandle)
+				if err == nil {
+					counterValues = make([]counterValue, len(doubleValues))
+					for i, v := range doubleValues {
+						counterValues[i] = counterValue{Name: v.Name, Value: v.Value}
+					}
+				}
 			}
 			if err != nil {
 				// ignore invalid data  as some counters from process instances returns this sometimes
@@ -496,14 +503,14 @@ func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersIn
 				continue
 			}
 			for _, cValue := range counterValues {
-				if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, cValue.instanceName) {
+				if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, cValue.Name) {
 					// If you are using a multiple instance identifier such as "w3wp#1"
 					// phd.dll returns only the first 2 characters of the identifier.
-					cValue.instanceName = metric.instance
+					cValue.Name = metric.instance
 				}
 
 				if shouldIncludeMetric(metric, cValue) {
-					addCounterMeasurement(metric, cValue.instanceName, cValue.value, collectedFields)
+					addCounterMeasurement(metric, cValue.Name, cValue.Value, collectedFields)
 				}
 			}
 		}
@@ -531,7 +538,8 @@ func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersIn
 // 在重新解析配置和刷新计数器之前需要调用此方法。
 //
 // 返回值：
-//   error：如果关闭查询时发生错误则返回相应错误，否则返回 nil。
+//
+//	error：如果关闭查询时发生错误则返回相应错误，否则返回 nil。
 func (m *WinPerfCounters) cleanQueries() error {
 	for _, hostCounterInfo := range m.hostCounters {
 		if err := hostCounterInfo.query.Close(); err != nil {
@@ -545,21 +553,23 @@ func (m *WinPerfCounters) cleanQueries() error {
 // shouldIncludeMetric 判断是否应该包含某个性能计数器指标。
 //
 // 参数：
-//   metric *counter：计数器对象，包含计数器的相关信息。
-//   cValue counterValue：计数器值对象，包含实例名称等信息。
+//
+//	metric *counter：计数器对象，包含计数器的相关信息。
+//	cValue counterValue：计数器值对象，包含实例名称等信息。
 //
 // 返回值：
-//   bool：如果应该包含该指标返回 true，否则返回 false。
+//
+//	bool：如果应该包含该指标返回 true，否则返回 false。
 func shouldIncludeMetric(metric *counter, cValue counterValue) bool {
 	if metric.includeTotal {
 		// 如果设置了 includeTotal，包含所有计数器
 		return true
 	}
-	if metric.instance == "*" && !strings.Contains(cValue.instanceName, "_Total") {
+	if metric.instance == "*" && !strings.Contains(cValue.Name, "_Total") {
 		// 如果实例设置为 "*" 且不是 "_Total" 实例，则包含
 		return true
 	}
-	if metric.instance == cValue.instanceName {
+	if metric.instance == cValue.Name {
 		// 如果实例名称完全匹配，则包含
 		return true
 	}
@@ -573,10 +583,11 @@ func shouldIncludeMetric(metric *counter, cValue counterValue) bool {
 // addCounterMeasurement 用于将采集到的计数器数据添加到收集字段中。
 //
 // 参数：
-//   metric *counter：计数器对象，包含计数器的相关信息。
-//   instanceName string：实例名称，用于区分不同的计数器实例。
-//   value interface{}：计数器采集到的值。
-//   collectFields fieldGrouping：用于收集所有计数器字段的映射。
+//
+//	metric *counter：计数器对象，包含计数器的相关信息。
+//	instanceName string：实例名称，用于区分不同的计数器实例。
+//	value interface{}：计数器采集到的值。
+//	collectFields fieldGrouping：用于收集所有计数器字段的映射。
 func addCounterMeasurement(metric *counter, instanceName string, value interface{}, collectFields fieldGrouping) {
 	var instance = instanceGrouping{metric.measurement, instanceName, metric.objectName}
 	if collectFields[instance] == nil {
