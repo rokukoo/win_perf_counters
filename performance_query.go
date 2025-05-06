@@ -31,6 +31,7 @@ type PerformanceQuery interface {
 	Open() error
 	Close() error
 	AddCounterToQuery(counterPath string) (pdhCounterHandle, error)
+	MustAddCounterToQuery(counterPath string) pdhCounterHandle
 	AddEnglishCounterToQuery(counterPath string) (pdhCounterHandle, error)
 	GetCounterPath(counterHandle pdhCounterHandle) (string, error)
 	ExpandWildCardPath(counterPath string) ([]string, error)
