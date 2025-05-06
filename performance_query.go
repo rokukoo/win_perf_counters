@@ -85,6 +85,14 @@ func NewPerformanceQuery(maxBufferSize uint32) PerformanceQuery {
 	return NewPerformanceQueryCreator().newPerformanceQuery("", maxBufferSize)
 }
 
+func MustNewPerformanceQuery() PerformanceQuery {
+	query := NewPerformanceQuery(initialBufferSize)
+	if err := query.Open(); err != nil {
+		panic(err)
+	}
+	return query
+}
+
 // Open creates a new counterPath that is used to manage the collection of performance data.
 // It returns counterPath handle used for subsequent calls for adding counters and querying data
 func (m *performanceQueryImpl) Open() error {
