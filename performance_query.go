@@ -85,8 +85,8 @@ func NewPerformanceQuery(maxBufferSize uint32) PerformanceQuery {
 	return NewPerformanceQueryCreator().newPerformanceQuery("", maxBufferSize)
 }
 
-func MustNewPerformanceQuery() PerformanceQuery {
-	query := NewPerformanceQuery(initialBufferSize)
+func MustNewOpenedPerformanceQuery(maxBufferSize uint32) PerformanceQuery {
+	query := NewPerformanceQuery(maxBufferSize)
 	if err := query.Open(); err != nil {
 		panic(err)
 	}
