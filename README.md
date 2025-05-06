@@ -26,10 +26,14 @@ type PerformanceQuery interface {
     AddEnglishCounterToQuery(counterPath string) (pdhCounterHandle, error)
     GetCounterPath(counterHandle pdhCounterHandle) (string, error)
     ExpandWildCardPath(counterPath string) ([]string, error)
-    GetFormattedCounterValueDouble(hCounter pdhCounterHandle) (float64, error)
     GetRawCounterValue(hCounter pdhCounterHandle) (int64, error)
-    GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]counterValue, error)
+    GetFormattedCounterValueLong(hCounter pdhCounterHandle) (int32, error)
+    GetFormattedCounterValueLarge(hCounter pdhCounterHandle) (int64, error)
+    GetFormattedCounterValueDouble(hCounter pdhCounterHandle) (float64, error)
     GetRawCounterArray(hCounter pdhCounterHandle) ([]counterValue, error)
+    GetFormattedCounterValueLong(hCounter pdhCounterHandle) (longValue, error)
+    GetFormattedCounterValueLarge(hCounter pdhCounterHandle) (largeValue, error)
+    GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]doubleValue, error)
     CollectData() error
     CollectDataWithTime() (time.Time, error)
     IsVistaOrNewer() bool
